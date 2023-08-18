@@ -1,0 +1,2 @@
+sql
+DROP TABLE watchtowers
