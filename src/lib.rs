@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use dotenv::dotenv;
 use std::env;
 
-use crate::models::NewWatchtower;
+use crate::models::{NewWatchtower, Watchtower};
 
 pub fn create_connection() -> MysqlConnection {
     dotenv().ok();
@@ -37,4 +37,23 @@ pub fn create_watchtower(
         .execute(conn)?;
 
     Ok(())
+}
+
+pub fn list_watchtowers() -> Vec<Watchtower> {
+    use self::schema::watchtowers::dsl::*;
+
+    let connection = &mut create_connection();
+    let results = watchtowers
+        .select(Watchtower::as_select())
+        .load(connection)
+        .expect("Error loading watchtowers");
+
+    println!("Displaying {} watchtowers", results.len());
+    for watchtower in &results {
+        println!("{}", watchtower.host);
+        println!("-----------\n");
+        println!("{}", watchtower.port);
+    }
+
+    results
 }
