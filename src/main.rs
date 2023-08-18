@@ -1,6 +1,7 @@
 use watchtower_monitor::{
-    list_watchtowers,
+    get_watchtowers,
     models::{ApiResult, Meta, Watchtower},
+    ping_watchtowers,
 };
 
 #[macro_use]
@@ -15,7 +16,7 @@ fn index() -> &'static str {
 
 #[get("/watchtowers/list")]
 fn watchtowers_list() -> Json<ApiResult<Watchtower>> {
-    let result = list_watchtowers();
+    let result = get_watchtowers();
     let total_entries = result.len();
     Json(ApiResult {
         data: result,
@@ -23,7 +24,12 @@ fn watchtowers_list() -> Json<ApiResult<Watchtower>> {
     })
 }
 
+#[get("/watchtowers/ping")]
+fn watchtowers_ping() {
+    ping_watchtowers();
+}
+
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![index, watchtowers_list])
+    rocket::build().mount("/", routes![index, watchtowers_list, watchtowers_ping])
 }

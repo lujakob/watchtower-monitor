@@ -7,6 +7,7 @@ pub mod schema;
 use diesel::prelude::*;
 use dotenv::dotenv;
 use std::env;
+use std::process::Command;
 
 use crate::models::{NewWatchtower, Watchtower};
 
@@ -39,7 +40,7 @@ pub fn create_watchtower(
     Ok(())
 }
 
-pub fn list_watchtowers() -> Vec<Watchtower> {
+pub fn get_watchtowers() -> Vec<Watchtower> {
     use self::schema::watchtowers::dsl::*;
 
     let connection = &mut create_connection();
@@ -48,12 +49,42 @@ pub fn list_watchtowers() -> Vec<Watchtower> {
         .load(connection)
         .expect("Error loading watchtowers");
 
-    println!("Displaying {} watchtowers", results.len());
-    for watchtower in &results {
-        println!("{}", watchtower.host);
+    results
+}
+
+pub fn ping_watchtowers() {
+    println!("ping watchtwowers");
+
+    let list = get_watchtowers();
+
+    for watchtower in &list {
+        println!("Host: {}\n", watchtower.host);
+        println!("Port: {}", watchtower.port);
         println!("-----------\n");
-        println!("{}", watchtower.port);
     }
 
-    results
+    for entry in list {
+        let mut curl_command = Command::new("curl");
+        curl_command
+            .arg("-s") // Silent mode to suppress progress meter
+            .arg("-i") // HEAD request to fetch headers only
+            .arg("-w")
+            .arg("%{http_code}") // Custom output format for status code
+            .arg("-o")
+            .arg("/dev/null") // Discard response body
+            .arg(format!("{}:{}/ping", entry.host, entry.port));
+
+        let command_string = format!("{:?}", curl_command);
+
+        println!("Executing curl command: {}", command_string);
+
+        let output = curl_command.output().expect("Failed to execute command");
+
+        if output.status.success() {
+            let status_code = String::from_utf8_lossy(&output.stdout);
+            println!("Host: {}, Status Code: {}", entry.host, status_code);
+        } else {
+            println!("Failed to ping host: {}", entry.host);
+        }
+    }
 }
